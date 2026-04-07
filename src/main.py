@@ -9,9 +9,25 @@ from src.core.monday.destination.build_missing_afs import (
     build_df_afs_to_create,
 )
 from src.core.monday.destination.create_monday_items import build_df_create_results
+from src.core.monday.destination.duplicates.build_duplicate_actions import (
+    build_df_duplicate_actions,
+    build_df_duplicates_delete,
+    build_df_duplicates_keep,
+)
+from src.core.monday.destination.duplicates.delete_duplicate_items import (
+    build_df_duplicates_delete_results,
+)
+from src.core.monday.destination.duplicates.find_duplicate_items import (
+    build_df_duplicates,
+    build_df_duplicates_summary,
+)
+from src.core.monday.destination.fetch_destination_audit_items import (
+    build_df_destination_audit,
+)
 from src.core.monday.destination.fetch_destination_items import build_df_afs_destination
 from src.core.monday.origin.build_enriched_afs import build_df_afs_enriched
 from src.core.monday.origin.fetch_origin_items import build_df_afs_origin
+from src.core.monday.payments.fetch_payment_items import build_df_payments_realized
 
 
 def log_info(message: str) -> None:
@@ -73,50 +89,67 @@ def main() -> int:
         print(df_create_results)
         print(f"Total create results: {len(df_create_results)}")
 
+        print("\n")
         print("\n8) Recarregando destino para auditoria...")
-        # TODO:
-        # from src.core.monday.destination.fetch_destination_audit_items import (
-        #     build_df_destino_auditoria,
-        # )
-        # df_destino_auditoria = build_df_destino_auditoria()
+        df_destination_audit = build_df_destination_audit()
+        print(df_destination_audit)
+        print(f"Total destination audit: {len(df_destination_audit)}")
 
+        print("\n")
         print("\n9) Encontrando itens duplicados no destino...")
-        # TODO:
-        # from src.core.monday.destination.duplicates.find_duplicate_items import (
-        #     build_df_duplicates_summary,
-        #     build_df_duplicates,
-        # )
-        # df_duplicates_summary = build_df_duplicates_summary(df_destino_auditoria)
-        # df_duplicates = build_df_duplicates(df_destino_auditoria, df_duplicates_summary)
+        df_duplicates_summary = build_df_duplicates_summary(
+            df_destination_audit=df_destination_audit
+        )
+        print(df_duplicates_summary)
+        print(f"Total duplicate keys: {len(df_duplicates_summary)}")
 
+        df_duplicates = build_df_duplicates(
+            df_destination_audit=df_destination_audit,
+            df_duplicates_summary=df_duplicates_summary,
+        )
+        print(df_duplicates)
+        print(f"Total duplicate rows: {len(df_duplicates)}")
+
+        print("\n")
         print("\n10) Definindo resolucao dos duplicados...")
-        # TODO:
-        # from src.core.monday.destination.duplicates.build_duplicate_actions import (
-        #     build_df_duplicate_actions,
-        #     build_df_duplicates_keep,
-        #     build_df_duplicates_delete,
-        # )
-        # df_duplicate_actions = build_df_duplicate_actions(df_duplicates)
-        # df_duplicates_keep = build_df_duplicates_keep(df_duplicate_actions)
-        # df_duplicates_delete = build_df_duplicates_delete(df_duplicate_actions)
+        # Acoes possiveis para cada item duplicado:
+        # - KEEP: manter o item com melhor prioridade/completude
+        # - DELETE: excluir item duplicado restante
+        df_duplicate_actions = build_df_duplicate_actions(df_duplicates=df_duplicates)
+        print(df_duplicate_actions)
+        print(f"Total duplicate actions: {len(df_duplicate_actions)}")
+
+        df_duplicates_keep = build_df_duplicates_keep(
+            df_duplicate_actions=df_duplicate_actions
+        )
+        print(f"Total KEEP: {len(df_duplicates_keep)}")
+
+        df_duplicates_delete = build_df_duplicates_delete(
+            df_duplicate_actions=df_duplicate_actions
+        )
+        print(f"Total DELETE: {len(df_duplicates_delete)}")
 
         print("\n11) Deletando itens duplicados...")
-        # TODO:
-        # from src.core.monday.destination.duplicates.delete_duplicate_items import (
-        #     build_df_duplicates_delete_results,
-        # )
-        # df_duplicates_delete_results = build_df_duplicates_delete_results(df_duplicates_delete)
+        # Acoes possiveis:
+        # - dry_run=True: simula sem deletar no Monday
+        # - dry_run=False: executa delecao real
+        df_duplicates_delete_results = build_df_duplicates_delete_results(
+            df_duplicates_delete=df_duplicates_delete,
+            dry_run=False,
+        )
+        print(df_duplicates_delete_results)
+        print(f"Total duplicate deletions: {len(df_duplicates_delete_results)}")
 
         print("\n12) Lendo boards de pagamentos realizados...")
-        # TODO:
-        # from src.core.monday.payments.fetch_payment_items import build_df_pagamentos_realizados
-        # df_pagamentos_realizados = build_df_pagamentos_realizados()
+        df_payments_realized = build_df_payments_realized()
+        print(df_payments_realized)
+        print(f"Total pagamentos realizados: {len(df_payments_realized)}")
 
         print("\n13) Identificando itens com PAGO para atualizar...")
         # TODO:
         # from src.core.monday.payments.build_pago_updates import build_df_pago_to_update
         # df_pago_to_update = build_df_pago_to_update(
-        #     df_destino_auditoria=df_destino_auditoria,
+        #     df_destination_audit=df_destination_audit,
         #     df_pagamentos_realizados=df_pagamentos_realizados,
         # )
 
@@ -135,10 +168,10 @@ def main() -> int:
         #     build_df_wrong_pago,
         # )
         # df_origin_expected = build_df_origem_expected_destino(df_afs_origin)
-        # df_wrong_board = build_df_wrong_board(df_destino_auditoria, df_origin_expected)
-        # df_wrong_group = build_df_wrong_group(df_destino_auditoria, df_origin_expected)
-        # df_no_origin = build_df_no_origin(df_destino_auditoria, df_origin_expected)
-        # df_wrong_pago = build_df_wrong_pago(df_destino_auditoria, df_pagamentos_realizados)
+        # df_wrong_board = build_df_wrong_board(df_destination_audit, df_origin_expected)
+        # df_wrong_group = build_df_wrong_group(df_destination_audit, df_origin_expected)
+        # df_no_origin = build_df_no_origin(df_destination_audit, df_origin_expected)
+        # df_wrong_pago = build_df_wrong_pago(df_destination_audit, df_payments_realized)
 
         print("\n16) Deletando itens no board errado...")
         # TODO:
