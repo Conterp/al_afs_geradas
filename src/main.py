@@ -8,7 +8,9 @@ from src.core.monday.destination.build_missing_afs import (
     build_df_afs_diff,
     build_df_afs_to_create,
 )
+from src.core.monday.destination.create_monday_items import build_df_create_results
 from src.core.monday.destination.fetch_destination_items import build_df_afs_destination
+from src.core.monday.origin.build_enriched_afs import build_df_afs_enriched
 from src.core.monday.origin.fetch_origin_items import build_df_afs_origin
 
 
@@ -59,16 +61,17 @@ def main() -> int:
         print(df_afs_to_create)
         print(f"Total AFs para criar: {len(df_afs_to_create)}")
 
+        print("\n")
         print("\n6) Buscando detalhes dos itens de origem para enriquecimento...")
-        # TODO:
-        # from src.core.monday.origin.fetch_origin_item_details import ...
-        # from src.core.monday.origin.build_enriched_afs import build_df_afs_enriched
-        # df_afs_enriched = build_df_afs_enriched(df_afs_to_create)
+        df_afs_enriched = build_df_afs_enriched(df_afs_to_create=df_afs_to_create)
+        print(df_afs_enriched)
+        print(f"Total AFs enriched: {len(df_afs_enriched)}")
 
+        print("\n")
         print("\n7) Criando itens faltantes nos boards de destino...")
-        # TODO:
-        # from src.core.monday.destination.create_monday_items import build_df_create_results
-        # df_create_results = build_df_create_results(df_afs_enriched)
+        df_create_results = build_df_create_results(df_afs_enriched=df_afs_enriched)
+        print(df_create_results)
+        print(f"Total create results: {len(df_create_results)}")
 
         print("\n8) Recarregando destino para auditoria...")
         # TODO:
