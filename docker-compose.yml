@@ -3,6 +3,6 @@ version: "3.9"
 services:
   app:
     build: .
-    container_name: al_afs_geradas
+    container_name: al-afs-geradas-sync
     env_file: .env
     restart: "no"
