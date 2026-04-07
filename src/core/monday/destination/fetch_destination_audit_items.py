@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from typing import Any, Dict, List, Optional
 
@@ -17,11 +18,40 @@ from src.config.settings import (
     SLEEP_BETWEEN_REQUESTS,
 )
 from src.core.monday.execute_monday_query import execute_monday_query
-from src.core.monday.origin.fetch_origin_items import extract_column_text
 
 
 def log_info(message: str) -> None:
     print(f"{LOG_PREFIX} [INFO] {message}")
+
+
+def extract_column_text_or_value(
+    column_values: List[Dict[str, Any]],
+    column_id: str,
+) -> str:
+    for column in column_values:
+        if column.get("id") != column_id:
+            continue
+
+        text_value = str(column.get("text") or "").strip()
+        if text_value:
+            return text_value
+
+        raw_value = column.get("value")
+        if not raw_value:
+            return ""
+
+        try:
+            parsed_value = json.loads(raw_value)
+        except Exception:
+            return str(raw_value).strip()
+
+        for key in ["label", "text", "value"]:
+            val = parsed_value.get(key)
+            if val is not None and str(val).strip() != "":
+                return str(val).strip()
+        return ""
+
+    return ""
 
 
 def build_destination_audit_query(board_id: str, cursor: Optional[str] = None) -> str:
@@ -40,6 +70,7 @@ def build_destination_audit_query(board_id: str, cursor: Optional[str] = None) -
               column_values(ids: ["{COLUNA_NUMERO_AF}", "{COLUNA_PAGO}", "date_mkkvsdmb"]) {{
                 id
                 text
+                value
               }}
             }}
           }}
@@ -63,6 +94,7 @@ def build_destination_audit_query(board_id: str, cursor: Optional[str] = None) -
             column_values(ids: ["{COLUNA_NUMERO_AF}", "{COLUNA_PAGO}", "date_mkkvsdmb"]) {{
               id
               text
+              value
             }}
           }}
         }}
@@ -100,9 +132,9 @@ def fetch_destination_audit_items(
         cursor = page.get("cursor")
 
         for item in items:
-            afs = extract_column_text(item.get("column_values", []), COLUNA_NUMERO_AF)
-            paid_flag = extract_column_text(item.get("column_values", []), COLUNA_PAGO)
-            af_date = extract_column_text(item.get("column_values", []), "date_mkkvsdmb")
+            afs = extract_column_text_or_value(item.get("column_values", []), COLUNA_NUMERO_AF)
+            paid_flag = extract_column_text_or_value(item.get("column_values", []), COLUNA_PAGO)
+            af_date = extract_column_text_or_value(item.get("column_values", []), "date_mkkvsdmb")
 
             if IGNORAR_SEM_NUMERO_AF and not afs:
                 continue
@@ -137,7 +169,7 @@ def build_df_destination_audit(show_progress: bool = MOSTRAR_PROGRESSO) -> pd.Da
     iterator = BOARDS_DESTINATION.items()
 
     if show_progress:
-        iterator = tqdm(iterator, total=len(BOARDS_DESTINATION), desc="AUDIT destination")
+        iterator = tqdm(iterator, total=len(BOARDS_DESTINATION), desc="AUDIT Destination")
 
     for board_key, board_config in iterator:
         records = fetch_destination_audit_items(

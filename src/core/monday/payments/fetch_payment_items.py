@@ -8,14 +8,12 @@ from tqdm.auto import tqdm
 
 from src.config.settings import (
     BOARDS_PAYMENTS,
-    COLUNA_NUMERO_AF,
     LOG_PREFIX,
     MOSTRAR_PROGRESSO,
     PAGE_LIMIT,
     SLEEP_BETWEEN_REQUESTS,
 )
 from src.core.monday.execute_monday_query import execute_monday_query
-from src.core.monday.origin.fetch_origin_items import extract_column_text
 
 
 def log_info(message: str) -> None:
@@ -24,6 +22,22 @@ def log_info(message: str) -> None:
 
 def log_warn(message: str) -> None:
     print(f"{LOG_PREFIX} [WARN] {message}")
+
+
+def normalize_af_from_payment_name(value: Any) -> str:
+    value_str = str(value or "").strip().upper()
+    if not value_str:
+        return ""
+
+    if value_str.startswith("AF "):
+        value_str = value_str[3:].strip()
+    elif value_str.startswith("AF"):
+        value_str = value_str[2:].strip()
+
+    if value_str.endswith(".0"):
+        value_str = value_str[:-2]
+
+    return value_str
 
 
 def build_payments_items_query(board_id: str, cursor: Optional[str] = None) -> str:
@@ -38,10 +52,6 @@ def build_payments_items_query(board_id: str, cursor: Optional[str] = None) -> s
               group {{
                 id
                 title
-              }}
-              column_values(ids: ["{COLUNA_NUMERO_AF}"]) {{
-                id
-                text
               }}
             }}
           }}
@@ -61,10 +71,6 @@ def build_payments_items_query(board_id: str, cursor: Optional[str] = None) -> s
             group {{
               id
               title
-            }}
-            column_values(ids: ["{COLUNA_NUMERO_AF}"]) {{
-              id
-              text
             }}
           }}
         }}
@@ -103,16 +109,17 @@ def fetch_payment_board_items(
 
         for item in items:
             group = item.get("group", {}) or {}
-            afs = extract_column_text(item.get("column_values", []), COLUNA_NUMERO_AF)
+            item_name = str(item.get("name", "")).strip()
+            afs = normalize_af_from_payment_name(item_name)
 
             if not afs:
                 continue
 
             records.append(
                 {
-                    "afs": str(afs).strip(),
+                    "afs": afs,
                     "id_item_monday": str(item.get("id", "")).strip(),
-                    "item_name": str(item.get("name", "")).strip(),
+                    "item_name": item_name,
                     "payment_board_id": board_id,
                     "payment_board_name": board_name,
                     "payment_group_id": str(group.get("id", "")).strip(),

@@ -27,7 +27,9 @@ from src.core.monday.destination.fetch_destination_audit_items import (
 from src.core.monday.destination.fetch_destination_items import build_df_afs_destination
 from src.core.monday.origin.build_enriched_afs import build_df_afs_enriched
 from src.core.monday.origin.fetch_origin_items import build_df_afs_origin
+from src.core.monday.payments.build_paid_updates import build_df_paid_to_update
 from src.core.monday.payments.fetch_payment_items import build_df_payments_realized
+from src.core.monday.payments.update_paid_items import build_df_paid_update_results
 
 
 def log_info(message: str) -> None:
@@ -146,17 +148,34 @@ def main() -> int:
         print(f"Total pagamentos realizados: {len(df_payments_realized)}")
 
         print("\n13) Identificando itens com PAGO para atualizar...")
-        # TODO:
-        # from src.core.monday.payments.build_pago_updates import build_df_pago_to_update
-        # df_pago_to_update = build_df_pago_to_update(
-        #     df_destination_audit=df_destination_audit,
-        #     df_pagamentos_realizados=df_pagamentos_realizados,
-        # )
+        df_paid_to_update = build_df_paid_to_update(
+            df_destination_audit=df_destination_audit,
+            df_payments_realized=df_payments_realized,
+        )
+        print(df_paid_to_update)
+        print(f"Total itens para atualizar PAGO: {len(df_paid_to_update)}")
 
         print("\n14) Atualizando coluna PAGO...")
-        # TODO:
-        # from src.core.monday.payments.update_pago_items import build_df_pago_update_results
-        # df_pago_update_results = build_df_pago_update_results(df_pago_to_update)
+        # Acoes possiveis:
+        # - dry_run=True: simula sem alterar no Monday
+        # - dry_run=False: atualiza no Monday
+        df_paid_update_results = build_df_paid_update_results(
+            df_paid_to_update=df_paid_to_update,
+            dry_run=False,
+        )
+        display_cols = [
+            "afs",
+            "id_item_monday",
+            "board_name",
+            "pago_target",
+            "status_update",
+            "error_message",
+        ]
+        existing_display_cols = [
+            col for col in display_cols if col in df_paid_update_results.columns
+        ]
+        print(df_paid_update_results[existing_display_cols])
+        print(f"Total updates de PAGO: {len(df_paid_update_results)}")
 
         print("\n15) Encontrando wrong board, wrong group, no origin e wrong pago...")
         # TODO:
