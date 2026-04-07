@@ -11,7 +11,6 @@ from src.config.settings import (
     BOARDS_DESTINATION,
     COLUNA_NUMERO_AF,
     COLUNA_PAGO,
-    IGNORAR_SEM_NUMERO_AF,
     LOG_PREFIX,
     MOSTRAR_PROGRESSO,
     PAGE_LIMIT,
@@ -135,9 +134,6 @@ def fetch_destination_audit_items(
             afs = extract_column_text_or_value(item.get("column_values", []), COLUNA_NUMERO_AF)
             paid_flag = extract_column_text_or_value(item.get("column_values", []), COLUNA_PAGO)
             af_date = extract_column_text_or_value(item.get("column_values", []), "date_mkkvsdmb")
-
-            if IGNORAR_SEM_NUMERO_AF and not afs:
-                continue
 
             group = item.get("group", {}) or {}
 
